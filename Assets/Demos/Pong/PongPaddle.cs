@@ -40,19 +40,19 @@ public class PongPaddle : MonoBehaviour
 
     void Update()
     {
+        // Vérifier si ce joueur peut contrôler ce paddle
+        bool canControl = (Globals.IsServer && Player == PongPlayer.PlayerLeft) || 
+                         (!Globals.IsServer && Player == PongPlayer.PlayerRight);
+        
+        if (!canControl) return;
+
         // Lire la valeur d'entrée de PaddleMove
         float direction = paddleMoveAction.ReadValue<float>();
-
-        // Appliquer une inversion pour le joueur de droite
-        if (Player == PongPlayer.PlayerRight)
-        {
-            direction *= -1;
-        }
 
         // Calculer la nouvelle position
         Vector3 newPosition = transform.position;
         newPosition.y += direction * Speed * Time.deltaTime;
-        newPosition.y = Mathf.Clamp(newPosition.y, MinY, MaxY); // Limiter le mouvement
+        newPosition.y = Mathf.Clamp(newPosition.y, MinY, MaxY);
 
         // Appliquer la nouvelle position
         transform.position = newPosition;

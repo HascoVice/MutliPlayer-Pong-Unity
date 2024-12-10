@@ -7,19 +7,23 @@ public class PaddleSyncServer : MonoBehaviour
     private ServerManager serverManager;
     private float nextUpdateTime = 0f;
 
+void Awake()
+    {
+        if (!Globals.IsServer)
+        {
+            enabled = false;
+        }
+    }
     void Start()
     {
         serverManager = FindObjectOfType<ServerManager>();
-        Debug.Log($"[SERVER] {paddleSide} PaddleSyncServer started");
 
         serverManager.UDP.OnMessageReceived += (string message, IPEndPoint sender) => {
             if (!message.StartsWith($"PADDLE_{paddleSide}_MOVE")) return;
 
             string[] tokens = message.Split('|');
             PaddleState state = JsonUtility.FromJson<PaddleState>(tokens[1]);
-
             transform.position = state.Position;
-            Debug.Log($"[SERVER] Updated {paddleSide} paddle position to: {state.Position}");
         };
     }
 
