@@ -7,37 +7,46 @@ public class PongWinUI : MonoBehaviour
     public GameObject PlayerLeft;
     public GameObject PlayerRight;
 
-    PongBall Ball;
+    private PongBall Ball;
+    private Scoring ScoringSystem;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         Panel.SetActive(false);
         PlayerLeft.SetActive(false);
         PlayerRight.SetActive(false);
         Ball = GameObject.FindFirstObjectByType<PongBall>();
+        ScoringSystem = GameObject.FindFirstObjectByType<Scoring>();
     }
 
-    // Update is called once per frame
     void Update()
     {
-        switch (Ball.State) {
-          case PongBallState.Playing:
-            Panel.SetActive(false);
-            break;
-          case PongBallState.PlayerLeftWin:
-            Panel.SetActive(true);
-            PlayerLeft.SetActive(true);
-            break;
-          case PongBallState.PlayerRightWin:
-            Panel.SetActive(true);
-            PlayerRight.SetActive(true);
-            break;
+        switch (Ball.State) 
+        {
+            case PongBallState.Playing:
+                Panel.SetActive(false);
+                PlayerLeft.SetActive(false);
+                PlayerRight.SetActive(false);
+                break;
+            case PongBallState.PlayerLeftWin:
+                Panel.SetActive(true);
+                PlayerLeft.SetActive(true);
+                PlayerRight.SetActive(false);
+                break;
+            case PongBallState.PlayerRightWin:
+                Panel.SetActive(true);
+                PlayerLeft.SetActive(false);
+                PlayerRight.SetActive(true);
+                break;
         }
-       
     }
 
-    public void OnReplay() {
-      SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    public void OnReplay() 
+    {
+        ScoringSystem.ResetScores();
+        Ball.State = PongBallState.Playing;
+        Panel.SetActive(false);
+        PlayerLeft.SetActive(false);
+        PlayerRight.SetActive(false);
     }
 }
