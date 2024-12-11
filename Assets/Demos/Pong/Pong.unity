@@ -1829,7 +1829,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   UDP: {fileID: 1950999898}
-  ServerIP: 127.0.0.1
+  ServerIP: 192.168.0.25
   ServerPort: 25000
 --- !u!1 &1396659331
 GameObject:

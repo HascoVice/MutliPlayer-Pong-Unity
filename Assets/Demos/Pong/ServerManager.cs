@@ -6,46 +6,48 @@ public class ServerManager : MonoBehaviour
 {
     public UDPService UDP;
     public int ListenPort = 25000;
+    private List<IPEndPoint> connectedClients = new List<IPEndPoint>();
 
-    public Dictionary<string, IPEndPoint> Clients = new Dictionary<string, IPEndPoint>(); 
-
-    void Awake() {
-        // Desactiver mon objet si je ne suis pas le serveur
-        if (!Globals.IsServer) {
+    void Awake()
+    {
+        if (!Globals.IsServer)
+        {
             gameObject.SetActive(false);
         }
     }
 
     void Start()
     {
+        if (!Globals.IsServer) return;
+
         UDP.Listen(ListenPort);
 
-        UDP.OnMessageReceived +=  
-            (string message, IPEndPoint sender) => {
-                Debug.Log("[SERVER] Message received from " + 
-                    sender.Address.ToString() + ":" + sender.Port 
-                    + " =>" + message);
+        UDP.OnMessageReceived += (string message, IPEndPoint sender) =>
+        {
+            if (message == "coucou")  // Message de connexion du client
+            {
+                Debug.Log($"[SERVER] New client connected from {sender}");
                 
-                switch (message) {
-                    case "coucou":
-                        // Ajouter le client à mon dictionnaire
-                        string addr = sender.Address.ToString() + ":" + sender.Port;
-                        if (!Clients.ContainsKey(addr)) {
-                            Clients.Add(addr, sender);
-                        }
-                        Debug.Log("There are " + Clients.Count + " clients present.");
-
-                        UDP.SendUDPMessage("welcome!", sender);
-                        break;
+                if (!connectedClients.Contains(sender))
+                {
+                    connectedClients.Add(sender);
+                    
+                    // Assigne LEFT au premier client, RIGHT au second
+                    string paddleSide = connectedClients.Count == 1 ? "LEFT" : "RIGHT";
+                    string assignMessage = $"ASSIGN_PADDLE_{paddleSide}";
+                    
+                    UDP.SendUDPMessage(assignMessage, sender);
+                    Debug.Log($"[SERVER] Assigned {paddleSide} paddle to {sender}");
                 }
-                
-                //@todo : do something with the message that has arrived! 
-            };
+            }
+        };
     }
 
-    public void BroadcastUDPMessage(string message) {
-        foreach (KeyValuePair<string, IPEndPoint> client in Clients) {
-            UDP.SendUDPMessage(message, client.Value);
+    public void BroadcastUDPMessage(string message)
+    {
+        foreach (var client in connectedClients)
+        {
+            UDP.SendUDPMessage(message, client);
         }
     }
 }
