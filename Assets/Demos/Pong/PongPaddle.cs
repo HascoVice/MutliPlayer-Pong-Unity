@@ -9,52 +9,55 @@ public enum PongPlayer
 
 public class PongPaddle : MonoBehaviour
 {
-    public PongPlayer Player = PongPlayer.PlayerLeft; // Définir si le paddle est à gauche ou à droite
-    public float Speed = 5f; // Vitesse de mouvement
-    public float MinY = -4f; // Limite inférieure
-    public float MaxY = 4f; // Limite supérieure
+    public PongPlayer Player = PongPlayer.PlayerLeft;
+    public float Speed = 5f;
+    public float MinY = -4f;
+    public float MaxY = 4f;
 
-    private InputSystem_Actions inputActions; // Référence à la classe générée
-    private InputAction paddleMoveAction; // Action spécifique pour PaddleMove
+    private PongInput inputActions;
+    private InputAction moveAction;
 
     void Awake()
     {
-        // Initialisation des Input Actions
-        inputActions = new InputSystem_Actions();
+        if (Globals.IsServer)
+        {
+            enabled = false;
+            return;
+        }
+        inputActions = new PongInput();
     }
 
     void OnEnable()
     {
-        // Récupérer l'action PaddleMove depuis l'Action Map Player
-        paddleMoveAction = inputActions.Player.PaddleMove;
-
-        // Activer l'action PaddleMove
-        paddleMoveAction.Enable();
+        if (!Globals.IsServer && inputActions != null)
+        {
+            inputActions.Enable();
+            moveAction = inputActions.Pong.Player1;
+            
+            bool isLocalPlayer = (Player == PongPlayer.PlayerLeft && Globals.IsLeftPlayer) ||
+                               (Player == PongPlayer.PlayerRight && Globals.IsRightPlayer);
+            
+            enabled = isLocalPlayer;
+            moveAction.Enable();
+        }
     }
 
     void OnDisable()
     {
-        // Désactiver l'action PaddleMove
-        paddleMoveAction.Disable();
+        if (moveAction != null)
+            moveAction.Disable();
+        if (inputActions != null)
+            inputActions.Disable();
     }
 
     void Update()
     {
-        // Vérifier si ce joueur peut contrôler ce paddle
-        bool canControl = (Globals.IsServer && Player == PongPlayer.PlayerLeft) || 
-                         (!Globals.IsServer && Player == PongPlayer.PlayerRight);
+        if (moveAction == null) return;
         
-        if (!canControl) return;
-
-        // Lire la valeur d'entrée de PaddleMove
-        float direction = paddleMoveAction.ReadValue<float>();
-
-        // Calculer la nouvelle position
+        float direction = moveAction.ReadValue<float>();
         Vector3 newPosition = transform.position;
         newPosition.y += direction * Speed * Time.deltaTime;
         newPosition.y = Mathf.Clamp(newPosition.y, MinY, MaxY);
-
-        // Appliquer la nouvelle position
         transform.position = newPosition;
     }
 }

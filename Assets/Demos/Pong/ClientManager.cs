@@ -15,7 +15,7 @@ public class ClientManager : MonoBehaviour
     {
         if (Globals.IsServer)
         {
-            gameObject.SetActive(false); // Désactive si ce n'est pas un client
+            gameObject.SetActive(false);
         }
     }
 
@@ -24,7 +24,7 @@ public class ClientManager : MonoBehaviour
         if (UDP == null)
         {
             Debug.LogError("[ClientManager] UDPService not assigned in the Inspector!");
-            enabled = false; // Désactive le script
+            enabled = false;
             return;
         }
 
@@ -37,7 +37,7 @@ public class ClientManager : MonoBehaviour
         catch (System.Exception ex)
         {
             Debug.LogError($"[ClientManager] Error initializing ServerEndpoint: {ex.Message}");
-            enabled = false; // Désactive le script si l'adresse ou le port sont invalides
+            enabled = false;
             return;
         }
 
@@ -46,6 +46,47 @@ public class ClientManager : MonoBehaviour
             Debug.Log("[CLIENT] Message received from " +
                       sender.Address.ToString() + ":" + sender.Port
                       + " =>" + message);
+
+            if (message.StartsWith("ASSIGN_PADDLE_"))
+            {
+                string[] parts = message.Split('_');
+                string paddleSide = parts[2];
+                
+                if (paddleSide == "LEFT")
+                {
+                    Globals.IsLeftPlayer = true;
+                    Globals.IsRightPlayer = false;
+                }
+                else if (paddleSide == "RIGHT") 
+                {
+                    Globals.IsLeftPlayer = false;
+                    Globals.IsRightPlayer = true;
+                }
+                
+                if (parts.Length != 3)
+                {
+                    Debug.LogError("Invalid ASSIGN_PADDLE message format");
+                    return;
+                }
+
+                if (paddleSide != "LEFT" && paddleSide != "RIGHT")
+                {
+                    Debug.LogError("Invalid paddle side: " + paddleSide);
+                    return;
+                }
+
+                var paddles = FindObjectsOfType<PongPaddle>();
+                foreach (var paddle in paddles)
+                {
+                    bool shouldBeEnabled = 
+                        (paddleSide == "LEFT" && paddle.Player == PongPlayer.PlayerLeft) ||
+                        (paddleSide == "RIGHT" && paddle.Player == PongPlayer.PlayerRight);
+
+                    paddle.enabled = shouldBeEnabled;
+                    var syncClient = paddle.GetComponent<PaddleSyncClient>();
+                    if (syncClient) syncClient.enabled = shouldBeEnabled;
+                }
+            }
         };
     }
 
