@@ -3,46 +3,52 @@ using System.Net;
 
 public class PaddleSyncServer : MonoBehaviour
 {
-    public string paddleSide; // "LEFT" ou "RIGHT"
+    public string paddleSide;
     private ServerManager serverManager;
-    private float nextUpdateTime = 0f;
 
-void Awake()
+    void Start()
     {
         if (!Globals.IsServer)
         {
             enabled = false;
+            return;
         }
-    }
-    void Start()
-    {
+
+        if (string.IsNullOrEmpty(paddleSide) || (paddleSide != "LEFT" && paddleSide != "RIGHT"))
+        {
+            Debug.LogError("Invalid paddleSide configuration");
+            enabled = false;
+            return;
+        }
+
         serverManager = FindObjectOfType<ServerManager>();
+        if (serverManager == null)
+        {
+            Debug.LogError("ServerManager not found!");
+            enabled = false;
+            return;
+        }
 
         serverManager.UDP.OnMessageReceived += (string message, IPEndPoint sender) => {
+            Debug.Log($"[SERVER] Received message: {message}");
+            
             if (!message.StartsWith($"PADDLE_{paddleSide}_MOVE")) return;
 
-            string[] tokens = message.Split('|');
-            PaddleState state = JsonUtility.FromJson<PaddleState>(tokens[1]);
+            string[] parts = message.Split('|');
+            if (parts.Length != 2)
+            {
+                Debug.LogError("Invalid paddle move message format");
+                return;
+            }
+
+            // Appliquer la position sur le serveur
+            PaddleState state = JsonUtility.FromJson<PaddleState>(parts[1]);
             transform.position = state.Position;
+
+            // Broadcaster aux clients
+            string broadcastMessage = $"PADDLE_{paddleSide}_UPDATE|" + parts[1];
+            serverManager.BroadcastUDPMessage(broadcastMessage);
+            Debug.Log($"[SERVER] Broadcasting: {broadcastMessage}");
         };
     }
-
-    void Update()
-    {
-        if (Time.time > nextUpdateTime)
-        {
-            PaddleState state = new PaddleState { Position = transform.position };
-            string json = JsonUtility.ToJson(state);
-            string message = $"PADDLE_{paddleSide}_UPDATE|" + json;
-
-            serverManager.BroadcastUDPMessage(message);
-            nextUpdateTime = Time.time + 0.03f;
-        }
-    }
-}
-
-[System.Serializable]
-public class PaddleState
-{
-    public Vector3 Position;
 }
