@@ -10,7 +10,7 @@ public enum PongBallState {
 public class PongBall : MonoBehaviour
 {
     public float Speed = 1;
-    public float ScoreDelay = 20f;  // Delay in seconds after scoring
+    public float ScoreDelay = 0.5f; 
     private Vector3 StartPosition;
     private Vector3 Direction;
     public PongBallState State { get; set; }

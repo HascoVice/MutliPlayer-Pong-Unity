@@ -21,7 +21,7 @@ public class Scoring : MonoBehaviour
 
     void Update()
     {
-        if (gameEnded) return;  // Skip score updates if game has ended
+        if (gameEnded) return; 
 
         if (ball.State == PongBallState.PlayerLeftWin)
         {
@@ -60,8 +60,7 @@ public class Scoring : MonoBehaviour
     {
         gameEnded = true;
         ball.SetGameEnded(true);
-        // Keep the final state (PlayerLeftWin or PlayerRightWin) for the UI
-        
+
     }
 
     public void ResetScores()
