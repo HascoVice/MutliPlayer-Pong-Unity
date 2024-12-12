@@ -1,0 +1,24 @@
+mdl 1.3;
+
+using state import *;
+
+import adobe::mtl::*;
+import adobe::util::*;
+import ::tex::gamma_mode;
+import ::state::normal;
+
+export material earth_moon_MAT(*)
+  = adobe::mtl::standard(
+    opacity : float(1.0),
+    baseColor : adobe::util::color_texture( texture_2d("earth_moon/earth_moon_Base_Color.png", ::tex::gamma_srgb) ),
+    translucence : float(0.0),
+    glow : float(0.0),
+    indexOfRefraction : float(1.6),
+    density : float(0.0),
+    roughness : adobe::util::float_texture( texture_2d("earth_moon/earth_moon_Roughness.png", ::tex::gamma_linear) ),
+    normal : adobe::util::normal_texture( texture_2d("earth_moon/earth_moon_Normal.png", ::tex::gamma_linear) ),
+    interiorColor : color(1.0, 1.0, 1.0),
+    metallic : float(0.0),
+    height : float(0.5),
+    heightScale : float(1.0)
+    );
