@@ -1,8 +1,12 @@
 using UnityEngine;
 
-public static class Globals
+public class Globals: MonoBehaviour
 {
-    public static bool IsServer { get; set; }
-    public static bool IsLeftPlayer { get; set; }
-    public static bool IsRightPlayer { get; set; }
+    public static bool IsServer = false;
+    public static string IPAddress = "";
+
+
+
+  
+
 }

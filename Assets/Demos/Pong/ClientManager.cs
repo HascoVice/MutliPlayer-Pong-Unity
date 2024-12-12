@@ -1,15 +1,22 @@
+using System;
 using System.Net;
 using UnityEngine;
+using System.Globalization;
 
 public class ClientManager : MonoBehaviour
 {
     public UDPService UDP;
     public string ServerIP = "127.0.0.1";
+    
     public int ServerPort = 25000;
-
     public IPEndPoint ServerEndpoint;
 
-    private float NextCoucouTimeout = -1;
+    private string assignedPaddle = "";
+
+    public PongPaddle paddleLeftPlayer;
+    public PongPaddle paddleRightPlayer;
+
+    public event Action<PaddleSyncClient.PaddleSide, float> OnPaddlePositionUpdated;
 
     void Awake()
     {
@@ -21,87 +28,100 @@ public class ClientManager : MonoBehaviour
 
     void Start()
     {
-        if (UDP == null)
+        UDP.InitClient();
+    
+        ServerEndpoint = new IPEndPoint(IPAddress.Parse(ServerIP), ServerPort);
+    
+        SendConnectMessage();
+
+        UDP.OnMessageReceived += HandleMessage;
+    }
+
+    private void SendConnectMessage()
+    {
+        Debug.Log("Sending CONNECT message to server: " + ServerEndpoint.ToString());
+        UDP.SendUDPMessage("CONNECT", ServerEndpoint);
+    }
+
+    private void HandleMessage(string message, IPEndPoint sender)
+    {
+        Debug.Log($"Message : {message}");
+
+        if (message.StartsWith("ASSIGN|PADDLE|"))
         {
-            Debug.LogError("[ClientManager] UDPService not assigned in the Inspector!");
-            enabled = false;
-            return;
+            HandlePaddleAssignment(message);
+        }
+        else if (message.StartsWith("UPDATE|PADDLE|"))
+        {
+            HandlePaddleUpdate(message);
         }
 
-        UDP.InitClient();
+    }
 
+    private void HandlePaddleAssignment(string message)
+    {
+        string[] tokens = message.Split('|');
+        if (tokens.Length == 3)
+        {
+            assignedPaddle = tokens[2];
+            Debug.Log($"Assigned paddle value: {assignedPaddle}");
+
+            if (assignedPaddle == "PaddleRight")
+            {
+                Debug.Log("Disabling paddleRightPlayer, Enabling paddleLeftPlayer");
+                paddleLeftPlayer.enabled = true;
+                paddleRightPlayer.enabled = false;
+            }
+            else
+            {
+                Debug.Log("Disabling paddleLeftPlayer, Enabling paddleRightPlayer");
+                paddleLeftPlayer.enabled = false;
+                paddleRightPlayer.enabled = true;
+            }
+        }
+    }
+
+    private void HandlePaddleUpdate(string message)
+    {
         try
         {
-            ServerEndpoint = new IPEndPoint(IPAddress.Parse(ServerIP), ServerPort);
+            string[] tokens = message.Split('|');
+            if (tokens.Length < 4)
+            {
+                Debug.LogWarning("Message mal formé : parties insuffisantes.");
+                return;
+            }
+
+            string receivedPaddleSide = tokens[2];
+            if (!Enum.TryParse(receivedPaddleSide, out PaddleSyncClient.PaddleSide paddleSide))
+            {
+                Debug.LogWarning("PaddleSide invalide.");
+                return;
+            }
+
+            string data = tokens[3];
+            string[] positionData = data.Split(':');
+
+            if (positionData.Length != 2 || positionData[0] != "Y")
+            {
+                Debug.LogWarning($"Données de position mal formées : {data}");
+                return;
+            }
+
+            float y = float.Parse(positionData[1], CultureInfo.InvariantCulture);
+            OnPaddlePositionUpdated?.Invoke(paddleSide, y);
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[ClientManager] Error initializing ServerEndpoint: {ex.Message}");
-            enabled = false;
-            return;
+            Debug.LogWarning($"Erreur lors du parsing des données de position : {ex.Message}");
         }
-
-        UDP.OnMessageReceived += (string message, IPEndPoint sender) =>
-        {
-            Debug.Log("[CLIENT] Message received from " +
-                      sender.Address.ToString() + ":" + sender.Port
-                      + " =>" + message);
-
-            if (message.StartsWith("ASSIGN_PADDLE_"))
-            {
-                string[] parts = message.Split('_');
-                string paddleSide = parts[2];
-                
-                if (paddleSide == "LEFT")
-                {
-                    Globals.IsLeftPlayer = true;
-                    Globals.IsRightPlayer = false;
-                }
-                else if (paddleSide == "RIGHT") 
-                {
-                    Globals.IsLeftPlayer = false;
-                    Globals.IsRightPlayer = true;
-                }
-                
-                if (parts.Length != 3)
-                {
-                    Debug.LogError("Invalid ASSIGN_PADDLE message format");
-                    return;
-                }
-
-                if (paddleSide != "LEFT" && paddleSide != "RIGHT")
-                {
-                    Debug.LogError("Invalid paddle side: " + paddleSide);
-                    return;
-                }
-
-                var paddles = FindObjectsOfType<PongPaddle>();
-                foreach (var paddle in paddles)
-                {
-                    bool shouldBeEnabled = 
-                        (paddleSide == "LEFT" && paddle.Player == PongPlayer.PlayerLeft) ||
-                        (paddleSide == "RIGHT" && paddle.Player == PongPlayer.PlayerRight);
-
-                    paddle.enabled = shouldBeEnabled;
-                    var syncClient = paddle.GetComponent<PaddleSyncClient>();
-                    if (syncClient) syncClient.enabled = shouldBeEnabled;
-                }
-            }
-        };
     }
 
-    void Update()
-    {
-        if (ServerEndpoint == null)
-        {
-            Debug.LogError("[ClientManager] ServerEndpoint is not set!");
-            return;
-        }
 
-        if (Time.time > NextCoucouTimeout)
-        {
-            UDP.SendUDPMessage("coucou", ServerEndpoint);
-            NextCoucouTimeout = Time.time + 0.5f;
-        }
+    public void SendPaddleUpdate(PaddleSyncClient.PaddleSide paddleSide, float positionY)
+    {
+        string message = $"UPDATE|PADDLE|{paddleSide}|Y:{positionY.ToString(CultureInfo.InvariantCulture)}";
+        UDP.SendUDPMessage(message, ServerEndpoint);
+        Debug.Log($"Message envoyé par le client {ServerEndpoint.Address}:{ServerEndpoint.Port} => {message}");
     }
 }

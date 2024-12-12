@@ -442,8 +442,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d3bb99b3add624cbe8e265485fdf1640, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  UDP: {fileID: 1950999898}
-  ListenPort: 25000
+  networkService: {fileID: 1950999898}
+  networkPort: 25000
 --- !u!1 &371610001
 GameObject:
   m_ObjectHideFlags: 0
@@ -1432,7 +1432,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 05023fa619899c149a512245cf8de31b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  paddleSide: RIGHT
+  paddleSide: 1
 --- !u!114 &807978591
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1445,7 +1445,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e702c2646d4cfa4c96fc694e07016b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  paddleSide: RIGHT
+  paddleSide: 1
 --- !u!1 &814606652
 GameObject:
   m_ObjectHideFlags: 0
@@ -1613,7 +1613,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 05023fa619899c149a512245cf8de31b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  paddleSide: LEFT
+  paddleSide: 0
 --- !u!114 &814606660
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1626,7 +1626,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e702c2646d4cfa4c96fc694e07016b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  paddleSide: LEFT
+  paddleSide: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1829,8 +1829,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   UDP: {fileID: 1950999898}
-  ServerIP: 192.168.0.25
+  ServerIP: 127.0.0.1
   ServerPort: 25000
+  paddleLeftPlayer: {fileID: 814606657}
+  paddleRightPlayer: {fileID: 807978588}
 --- !u!1 &1396659331
 GameObject:
   m_ObjectHideFlags: 0
