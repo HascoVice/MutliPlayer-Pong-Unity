@@ -1,54 +1,87 @@
-using UnityEngine;
+using System;
 using System.Net;
+using UnityEngine;
 
 public class PaddleSyncServer : MonoBehaviour
 {
-    public string paddleSide;
-    private ServerManager serverManager;
+    public enum PaddleSide { LEFT, RIGHT }
+    public PaddleSide paddleSide;
 
-    void Start()
+    private ServerManager serverManager;
+    private float paddlePositionY;
+
+    float NextUpdateTimeout = -1;
+    
+    private IPEndPoint lastMessageSender;
+
+    void Awake()
     {
         if (!Globals.IsServer)
         {
             enabled = false;
-            return;
         }
+    }
 
-        if (string.IsNullOrEmpty(paddleSide) || (paddleSide != "LEFT" && paddleSide != "RIGHT"))
-        {
-            Debug.LogError("Invalid paddleSide configuration");
-            enabled = false;
-            return;
-        }
-
+    void Start()
+    {   
         serverManager = FindObjectOfType<ServerManager>();
         if (serverManager == null)
         {
-            Debug.LogError("ServerManager not found!");
+            Debug.LogError("ServerManager not found in scene!");
             enabled = false;
             return;
         }
+        
+        serverManager.UDP.OnMessageReceived += OnMessageReceived;
+        paddlePositionY = transform.position.y;
+    }
+    
+    void Update()
+    {
+        float currentPositionY = transform.position.y;
+        if (Time.time > NextUpdateTimeout)
+        {
+            string message = $"UPDATE|PADDLE|{paddleSide}|Y:{currentPositionY.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+            serverManager.BroadcastUDPMessage(message, lastMessageSender);            
+            NextUpdateTimeout = Time.time + 0.03f;
+        }
+    }
 
-        serverManager.UDP.OnMessageReceived += (string message, IPEndPoint sender) => {
-            Debug.Log($"[SERVER] Received message: {message}");
-            
-            if (!message.StartsWith($"PADDLE_{paddleSide}_MOVE")) return;
+    private void OnMessageReceived(string message, IPEndPoint sender)
+    {
+        if (!message.StartsWith("UPDATE|PADDLE|")) return;
 
-            string[] parts = message.Split('|');
-            if (parts.Length != 2)
+        lastMessageSender = sender;
+
+        string[] tokens = message.Split('|');
+        if (tokens.Length < 4 || !Enum.TryParse(tokens[2], out PaddleSide receivedSide)) return;
+
+        if (receivedSide == paddleSide)
+        {
+            string positionData = tokens[3].Replace("Y:", "");
+            if (float.TryParse(positionData, System.Globalization.NumberStyles.Float, 
+                    System.Globalization.CultureInfo.InvariantCulture, out float newPositionY))
             {
-                Debug.LogError("Invalid paddle move message format");
-                return;
+                paddlePositionY = newPositionY;
+                UpdatePaddlePosition();
             }
+        }
+    }
 
-            // Appliquer la position sur le serveur
-            PaddleState state = JsonUtility.FromJson<PaddleState>(parts[1]);
-            transform.position = state.Position;
+    private void UpdatePaddlePosition()
+    {
+        Vector3 newPosition = transform.position;
+        newPosition.y = paddlePositionY;
+        transform.position = newPosition;
 
-            // Broadcaster aux clients
-            string broadcastMessage = $"PADDLE_{paddleSide}_UPDATE|" + parts[1];
-            serverManager.BroadcastUDPMessage(broadcastMessage);
-            Debug.Log($"[SERVER] Broadcasting: {broadcastMessage}");
-        };
+        Debug.Log($"Paddle {paddleSide} position updated to Y: {paddlePositionY}");
+    }
+
+    void OnDestroy()
+    {
+        if (serverManager?.UDP != null)
+        {
+            serverManager.UDP.OnMessageReceived -= OnMessageReceived;
+        }
     }
 }

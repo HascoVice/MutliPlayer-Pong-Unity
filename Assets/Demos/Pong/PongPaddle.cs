@@ -1,63 +1,52 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public enum PongPlayer
-{
-    PlayerLeft = 1,
-    PlayerRight = 2
+public enum PongPlayer {
+  PlayerLeft = 1,
+  PlayerRight = 2
 }
 
 public class PongPaddle : MonoBehaviour
-{
+{ 
     public PongPlayer Player = PongPlayer.PlayerLeft;
-    public float Speed = 5f;
-    public float MinY = -4f;
-    public float MaxY = 4f;
+    public float Speed = 1;
+    public float MinY = -4;
+    public float MaxY = 4;
 
-    private PongInput inputActions;
-    private InputAction moveAction;
+    PongInput inputActions;
+    InputAction PlayerAction;
 
-    void Awake()
+
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Start()
     {
-        if (Globals.IsServer)
-        {
-            enabled = false;
-            return;
-        }
         inputActions = new PongInput();
-    }
-
-    void OnEnable()
-    {
-        if (!Globals.IsServer && inputActions != null)
-        {
-            inputActions.Enable();
-            moveAction = inputActions.Pong.Player1;
-            
-            bool isLocalPlayer = (Player == PongPlayer.PlayerLeft && Globals.IsLeftPlayer) ||
-                               (Player == PongPlayer.PlayerRight && Globals.IsRightPlayer);
-            
-            enabled = isLocalPlayer;
-            moveAction.Enable();
+        switch (Player) {
+          case PongPlayer.PlayerLeft:
+            PlayerAction = inputActions.Pong.Player1;
+            break;
+          case PongPlayer.PlayerRight:
+            PlayerAction = inputActions.Pong.Player2;
+            break;
         }
+
+        PlayerAction.Enable();
     }
 
-    void OnDisable()
-    {
-        if (moveAction != null)
-            moveAction.Disable();
-        if (inputActions != null)
-            inputActions.Disable();
-    }
-
+    // Update is called once per frame
     void Update()
     {
-        if (moveAction == null) return;
-        
-        float direction = moveAction.ReadValue<float>();
-        Vector3 newPosition = transform.position;
-        newPosition.y += direction * Speed * Time.deltaTime;
-        newPosition.y = Mathf.Clamp(newPosition.y, MinY, MaxY);
-        transform.position = newPosition;
+      if (Globals.IsServer) return;
+
+      float direction = PlayerAction.ReadValue<float>();
+
+      Vector3 newPos = transform.position + (Vector3.up * Speed * direction * Time.deltaTime);
+      newPos.y = Mathf.Clamp(newPos.y, MinY, MaxY);
+
+      transform.position = newPos;
+    }
+
+    void OnDisable() {
+      PlayerAction.Disable();
     }
 }
