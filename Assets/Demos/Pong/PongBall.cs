@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections;
 
 public enum PongBallState {
   Playing = 0,
@@ -10,92 +9,66 @@ public enum PongBallState {
 public class PongBall : MonoBehaviour
 {
     public float Speed = 1;
-    public float ScoreDelay = 20f;  // Delay in seconds after scoring
-    private Vector3 StartPosition;
-    private Vector3 Direction;
-    public PongBallState State { get; set; }
-    private bool gameEnded = false;
-    private bool isWaitingToStart = false;
 
-    void Start()
-    {
-        StartPosition = transform.position;
-        ResetBall();
+    Vector3 Direction;
+    PongBallState _State = PongBallState.Playing;
+
+    public PongBallState State {
+      get {
+        return _State;
+      }
+    } 
+
+    void Awake() {
+      if (!Globals.IsServer) {
+        enabled = false;
+      }
+
     }
 
-    void ResetBall()
-    {
-        transform.position = StartPosition;
-        isWaitingToStart = true;
-        Direction = new Vector3(
-            Random.Range(0.5f, 1),
-            Random.Range(-0.5f, 0.5f),
-            0
-        );
-        Direction.x *= Mathf.Sign(Random.Range(-100, 100));
-        Direction.Normalize();
-
-        StartCoroutine(StartAfterDelay());
+    void Start() {
+      Direction = new Vector3(
+        Random.Range(0.5f, 1),
+        Random.Range(-0.5f, 0.5f),
+        0
+      );
+      Direction.x *= Mathf.Sign(Random.Range(-100, 100));
+      Direction.Normalize();
     }
 
-    IEnumerator StartAfterDelay()
-    {
-        yield return new WaitForSeconds(ScoreDelay);
-        isWaitingToStart = false;
+    void Update() {
+      if (State != PongBallState.Playing) {
+        return;
+      }
+
+      transform.position = transform.position + (Direction * Speed * Time.deltaTime);
     }
 
-    void Awake()
-    {
-        if (!Globals.IsServer)
-        {
-            enabled = false;
-        }
+    void OnCollisionEnter(Collision c) {
+      switch (c.collider.name) {
+        case "BoundTop":
+        case "BoundBottom":
+          Direction.y = -Direction.y;
+          break;
+
+        case "PaddleLeft":
+        case "PaddleRight":
+        case "BoundLeft":
+        case "BoundRight":
+          Direction.x = -Direction.x;
+          break;
+
+        /*
+        case "BoundLeft":
+          _State = PongBallState.PlayerRightWin;
+          break;
+
+        case "BoundRight":
+          _State = PongBallState.PlayerLeftWin;
+          break;
+        */
+
+      }
     }
 
-    void OnCollisionEnter(Collision c)
-    {
-        if (gameEnded) return;  // Skip collision handling if game has ended
-
-        switch (c.collider.name)
-        {
-            case "BoundTop":
-            case "BoundBottom":
-                Direction.y = -Direction.y;
-                break;
-
-            case "PaddleLeft":
-            case "PaddleRight":
-                Direction.x = -Direction.x;
-                break;
-
-            case "BoundLeft":
-                State = PongBallState.PlayerRightWin;
-                ResetBall();
-                break;
-
-            case "BoundRight":
-                State = PongBallState.PlayerLeftWin;
-                ResetBall();
-                break;
-        }
-    }
-
-    void Update()
-    {
-        if (State != PongBallState.Playing || gameEnded || isWaitingToStart)
-        {
-            return;
-        }
-
-        transform.position = transform.position + (Direction * Speed * Time.deltaTime);
-    }
-
-    public void SetGameEnded(bool ended)
-    {
-        gameEnded = ended;
-        if (ended)
-        {
-            transform.position = StartPosition;
-        }
-    }
 }
